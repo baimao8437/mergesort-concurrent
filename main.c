@@ -102,9 +102,14 @@ static uint32_t build_list_from_file(llist_t *_list, const char *filename)
 {
     FILE *fp = fopen(filename, "r");
     char buffer[16];
+    int i = 0 ;
 
-    while (fgets(buffer, 16, fp) != NULL) {
-        list_add(_list, atol(buffer));
+    while (fgets(buffer, 16, fp)) {
+        while (buffer[i] != '\0')
+            i++;
+        buffer[i - 1] = '\0';
+        i = 0;
+        list_add(_list, buffer);
     }
 
     fclose(fp);

@@ -1,8 +1,20 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "list.h"
 #include "generic_printf.h"
+
+static val_t nameToVal(char lastName[])
+{
+    val_t val = 0;
+    for (int i = 0; i < 12; i++) {
+        val *= 26;
+        if (lastName[i])
+            val += lastName[i] - 'a' + 1;
+    }
+    return val;
+}
 
 /**
  * @brief Create a new node with data _val_ and set the next node to _net_
@@ -10,14 +22,17 @@
  * @param next Pointer to the next node
  * @return Pointer to the created new node
  */
-static node_t *node_new(val_t val, node_t *next)
+static node_t *node_new(char lastName[], node_t *next)
 {
     /* allocate node */
     node_t *node = malloc(sizeof(node_t));
-    node->data = val;
+    strcpy(node->lastName, lastName);
+    node->data = nameToVal(lastName);
     node->next = next;
     return node;
 }
+
+
 
 /**
  * @brief Initialize the linked list.
@@ -42,9 +57,9 @@ llist_t *list_new()
  * @param val Specify the value
  * @return The final size of the linked list
  */
-int list_add(llist_t * const list, const val_t val)
+int list_add(llist_t * const list, char lastName[])
 {
-    node_t *e = node_new(val, NULL);
+    node_t *e = node_new(lastName, NULL);
     e->next = list->head;
     list->head = e;
     list->size++;
@@ -78,7 +93,7 @@ void list_print(const llist_t * const list)
 {
     const node_t *cur = list->head;
     while (cur) {
-        xprintln(cur->data);
+        xprintln((char *)cur->lastName);
         cur = cur->next;
     }
 }
