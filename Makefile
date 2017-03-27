@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -std=gnu11 -Wall -g -pthread
-OBJS = list.o threadpool.o merge_sort.o main.o
+OBJS = list.o threadpool.o merge_sort.o text_align.o main.o
 
 .PHONY: all clean test
 

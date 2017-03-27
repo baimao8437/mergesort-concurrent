@@ -7,6 +7,15 @@
 #include "list.h"
 #include "merge_sort.h"
 
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <assert.h>
+#include <unistd.h>
+#include "text_align.h"
+
+#define MAX_LAST_NAME_SIZE 16
+#define ALIGN_FILE "align.txt"
+
 #define USAGE "usage: ./sort [thread_count] [input_file]\n"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -81,7 +90,7 @@ void cut_local_list(void *data)
     tqueue_push(pool->queue, task_new(sort_local_list, local_list));
 }
 
-static void *task_run(void *data __attribute__ ((__unused__)))
+static void *task_run(void *data __attribute__((__unused__)))
 {
     while (1) {
         task_t *_task = tqueue_pop(pool->queue);
@@ -98,21 +107,32 @@ static void *task_run(void *data __attribute__ ((__unused__)))
     pthread_exit(NULL);
 }
 
-static uint32_t build_list_from_file(llist_t *_list, const char *filename)
-{
-    FILE *fp = fopen(filename, "r");
-    char buffer[16];
-    int i = 0 ;
+static char *map;
+static off_t file_size;
 
-    while (fgets(buffer, 16, fp)) {
-        while (buffer[i] != '\0')
-            i++;
-        buffer[i - 1] = '\0';
-        i = 0;
-        list_add(_list, buffer);
+
+static void alignAndMap(char const fileName[])
+{
+    text_align(fileName, ALIGN_FILE, MAX_LAST_NAME_SIZE);
+    file_size = fsize(ALIGN_FILE);
+    int fd = open(ALIGN_FILE, O_RDONLY | O_NONBLOCK);
+
+    map = mmap(NULL, file_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+    assert(map && "mmap error");
+
+    // Remove the align.txt file
+    assert(!remove(ALIGN_FILE) && "File remove falid");
+    close(fd);
+}
+
+static uint32_t build_list_from_file(llist_t *_list, char const *fileName)
+{
+    alignAndMap(fileName);
+
+    for (int i = 0 ; i < file_size / MAX_LAST_NAME_SIZE; i++) {
+        list_add(_list, map + MAX_LAST_NAME_SIZE * i);
     }
 
-    fclose(fp);
     return _list->size;
 }
 
@@ -127,6 +147,7 @@ int main(int argc, char const *argv[])
     /* Read data */
     the_list = list_new();
     data_count = build_list_from_file(the_list, argv[2]);
+
 
     max_cut = MIN(thread_count, data_count);
 
@@ -159,6 +180,9 @@ int main(int argc, char const *argv[])
 
     /* Output sorted result */
     list_print(the_list);
+
+    /* Release mmap*/
+    munmap(map, file_size);
 
     return 0;
 }
