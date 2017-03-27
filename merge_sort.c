@@ -7,7 +7,7 @@
  */
 llist_t *sort_n_merge(llist_t *a, llist_t *b)
 {
-    llist_t *_list = list_new();
+    llist_t *_list = List.list_new();
     node_t *current = NULL;
     while (a->size && b->size) {
         /* Choose the linked list whose data of first node is small. */
@@ -47,10 +47,10 @@ llist_t *split_n_merge(llist_t *list)
         return list;
     int mid = list->size / 2;
     llist_t *left = list;
-    llist_t *right = list_new();
-    right->head = list_get(list, mid);
+    llist_t *right = List.list_new();
+    right->head = List.list_get(list, mid);
     right->size = list->size - mid;
-    list_get(list, mid - 1)->next = NULL;
+    List.list_get(list, mid - 1)->next = NULL;
     left->size = mid;
     return sort_n_merge(split_n_merge(left), split_n_merge(right));
 }

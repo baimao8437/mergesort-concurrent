@@ -111,3 +111,12 @@ void list_free_nodes(llist_t *list)
     }
     list->head = NULL;
 }
+
+/* API gateway */
+struct  __LIST_API__ List = {
+    .list_new=list_new,
+    .list_add=list_add,
+    .list_print= list_print,
+    .list_get = list_get,
+    .list_free_nodes=list_free_nodes,
+};

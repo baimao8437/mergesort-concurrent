@@ -24,10 +24,12 @@ typedef struct {
     uint32_t size;  /**< The size of the linked list */
 } llist_t;
 
-llist_t *list_new();
-int list_add(llist_t * const the_list, char *lastName);
-void list_print(const llist_t * const the_list);
-node_t *list_get(llist_t * const the_list, const uint32_t index);
-void list_free_nodes(llist_t *the_list);
+extern struct __LIST_API__ {
+    llist_t *(*list_new)();
+    int (*list_add)(llist_t * const the_list, char *lastName);
+    void (*list_print)(const llist_t * const the_list);
+    node_t *(*list_get)(llist_t * const the_list, const uint32_t index);
+    void (*list_free_nodes)(llist_t *the_list);
+} List;
 
 #endif

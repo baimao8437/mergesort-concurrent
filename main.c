@@ -6,15 +6,7 @@
 #include "threadpool.h"
 #include "list.h"
 #include "merge_sort.h"
-
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <assert.h>
-#include <unistd.h>
-#include "text_align.h"
-
-#define MAX_LAST_NAME_SIZE 16
-#define ALIGN_FILE "align.txt"
+#include "alignAndMap.h"
 
 #define USAGE "usage: ./sort [thread_count] [input_file]\n"
 
@@ -73,18 +65,18 @@ void cut_local_list(void *data)
     head = list->head;
     for (int i = 0; i < max_cut - 1; ++i) {
         /* Create local list container */
-        local_list = list_new();
+        local_list = List.list_new();
         local_list->head = head;
         local_list->size = local_size;
         /* Cut the local list */
-        tail = list_get(local_list, local_size - 1);
+        tail = List.list_get(local_list, local_size - 1);
         head = tail->next;
         tail->next = NULL;
         /* Create new task */
         tqueue_push(pool->queue, task_new(sort_local_list, local_list));
     }
     /* The last takes the rest. */
-    local_list = list_new();
+    local_list = List.list_new();
     local_list->head = head;
     local_list->size = list->size - local_size * (max_cut - 1);
     tqueue_push(pool->queue, task_new(sort_local_list, local_list));
@@ -107,30 +99,10 @@ static void *task_run(void *data __attribute__((__unused__)))
     pthread_exit(NULL);
 }
 
-static char *map;
-static off_t file_size;
-
-
-static void alignAndMap(char const fileName[])
+static uint32_t build_list_from_mmap(llist_t *_list, char *map)
 {
-    text_align(fileName, ALIGN_FILE, MAX_LAST_NAME_SIZE);
-    file_size = fsize(ALIGN_FILE);
-    int fd = open(ALIGN_FILE, O_RDONLY | O_NONBLOCK);
-
-    map = mmap(NULL, file_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-    assert(map && "mmap error");
-
-    // Remove the align.txt file
-    assert(!remove(ALIGN_FILE) && "File remove falid");
-    close(fd);
-}
-
-static uint32_t build_list_from_file(llist_t *_list, char const *fileName)
-{
-    alignAndMap(fileName);
-
-    for (int i = 0 ; i < file_size / MAX_LAST_NAME_SIZE; i++) {
-        list_add(_list, map + MAX_LAST_NAME_SIZE * i);
+    for (int i = 0 ; i < MMap.total_line(); i++) {
+        List.list_add(_list, MMap.ptrLine(map, i));
     }
 
     return _list->size;
@@ -145,9 +117,9 @@ int main(int argc, char const *argv[])
     thread_count = atoi(argv[1]);
 
     /* Read data */
-    the_list = list_new();
-    data_count = build_list_from_file(the_list, argv[2]);
-
+    the_list = List.list_new();
+    char *map = MMap.alignAndMap(argv[2]);
+    data_count = build_list_from_mmap(the_list, map);
 
     max_cut = MIN(thread_count, data_count);
 
@@ -179,10 +151,10 @@ int main(int argc, char const *argv[])
     printf("#Throughput: %d (per sec)\n", (uint32_t)(consumed_tasks * 1000 / duration));
 
     /* Output sorted result */
-    list_print(the_list);
+    List.list_print(the_list);
 
-    /* Release mmap*/
-    munmap(map, file_size);
+    /* Release mmap */
+    MMap.release(map);
 
     return 0;
 }
